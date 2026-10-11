@@ -1,0 +1,75 @@
+{
+  "device": "NP03J",
+  "kernel_version": "6.1.177",
+  "android_version": "android14",
+  "page_size": "4k",
+  "manifest_commit": "56e710cae04404a03e09b1afd1f8ae4346b9225f",
+  "kernel_common_commit": "4056c236e4c84d5fdc5c80409a8fa37ef82f53b9",
+  "root_repo": "pershoot/KernelSU-Next",
+  "root_commit": "8e5145bd65852590cb180e09f2a6a1519a728ec5",
+  "driver_version": 33348,
+  "manager_version": "v3.4.1-np03j",
+  "manager_package": "io.vqmxaz.tnprke.lhcsud",
+  "susfs_repo": "https://gitlab.com/pershoot/susfs4ksu.git",
+  "susfs_commit": "fb0f1f7dd7680e4a9c637c19dfdd8fad388458db",
+  "nomount_commit": "5a610db7649a59eb3e3d710653618d594941f8da",
+  "bbg_commit": "a54e0dc6cf0aff4dd87fec49644a02d2eb612905",
+  "kernel_patches_commit": "41ae18b35d20e0c6ac04116785a4a1089528ae94",
+  "anykernel3_commit": "e1e9dce98430c5c6f231f7094a8c7f4ecaf50948",
+  "features": [
+    "SUSFS",
+    "NoMount",
+    "BBG",
+    "Unicode"
+  ],
+  "disabled_features": [
+    "NET",
+    "DS",
+    "NTSync",
+    "Ptrace",
+    "BPF",
+    "Perf"
+  ],
+  "branding": "",
+  "keep_kmi": true,
+  "allow_version_mismatch": false,
+  "release_type": "CI",
+  "rust_toolchain": "1.99.0",
+  "zig_version": "0.15.2",
+  "zig_url": "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz",
+  "zig_sha256": "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239",
+  "actions": {
+    "actions/checkout": {
+      "ref": "v7",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1"
+    },
+    "actions/upload-artifact": {
+      "ref": "v7",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+    },
+    "actions/download-artifact": {
+      "ref": "v7",
+      "sha": "37930b1c2abaa49bbe596cd826c3c89aef350131"
+    },
+    "actions/cache": {
+      "ref": "v6",
+      "sha": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9"
+    },
+    "actions/setup-java": {
+      "ref": "v5",
+      "sha": "b6effb05e454b25005698d916606bdc6ffcbf961"
+    },
+    "android-actions/setup-android": {
+      "ref": "v3",
+      "sha": "9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407"
+    },
+    "endersonmenezes/free-disk-space": {
+      "ref": "v4",
+      "sha": "2a22f8c59cae9cddae7194b33e6b92d023b2b4b8"
+    },
+    "pierotofy/set-swap-space": {
+      "ref": "master",
+      "sha": "fc79b3f67fa8a838184ce84a674ca12238d2c761"
+    }
+  }
+}

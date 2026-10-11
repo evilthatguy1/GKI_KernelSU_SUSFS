@@ -5,17 +5,13 @@ name: Sync Kernel Matrix
 # branch is rebuilt from main each run, so PRs never stack). Dead/retired branches
 # need no action: download-kernel falls back to the latest release tag.
 #
-# NOTE: scheduled runs only fire from the default branch, so the cron
-# below stays dormant until this file exists on main. workflow_dispatch
-# works from any branch right away.
+# Manual-only in this device fork to preserve the audited build recipe.
 
 permissions:
   contents: write
   pull-requests: write
 
 on:
-  schedule:
-    - cron: '0 5 * * *'  # midnight EST (5am UTC)
   workflow_dispatch:
 
 jobs:

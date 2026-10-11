@@ -1,0 +1,266 @@
+name: NP03J | 6.1.177 LTS | KernelSU Next
+run-name: NP03J 6.1.177 LTS - hidden Next manager + SUSFS + NoMount
+'on':
+  workflow_dispatch: null
+  push:
+    branches:
+    - main
+    paths:
+    - .github/workflows/np03j-next-6.1.177.yml
+    - .github/config/np03j-next-6.1.177.json
+    - .github/config/np03j-6.1.177-manifest.xml
+    - .github/scripts/np03j_*
+permissions:
+  contents: read
+concurrency:
+  group: np03j-next-6.1.177-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  manager:
+    name: Build hidden Next manager and verify its certificate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    outputs:
+      signature: ${{ steps.manager.outputs.signature }}
+    steps:
+    - name: Checkout build recipe
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Validate and export source lock
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py export-lock
+    - name: Checkout matching Next manager and userspace
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        repository: ${{ env.ROOT_REPO }}
+        ref: ${{ env.ROOT_COMMIT }}
+        fetch-depth: 0
+        path: manager-source
+        persist-credentials: false
+    - name: Set up Java 21
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+    - name: Restore Gradle and Rust cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: np03j-manager-${{ runner.os }}-${{ env.ROOT_COMMIT }}-${{ env.RUST_TOOLCHAIN }}
+    - name: Prepare hidden package and matching driver version
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py prepare-manager
+    - name: Build, sign and verify arm64 manager
+      shell: bash
+      run: bash .github/scripts/np03j_build_manager.sh
+      id: manager
+    - name: Upload signed manager and public certificate
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: NP03J-Next-Manager-33348
+        path: manager-deliverables/
+        if-no-files-found: error
+        retention-days: 14
+  kernel:
+    name: Build pinned kernel and matching NoMount module
+    needs:
+    - manager
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      MANAGER_SIGNATURE: ${{ needs.manager.outputs.signature }}
+    steps:
+    - name: Checkout build recipe
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Validate and export source lock
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py export-lock
+    - name: Free runner disk space
+      uses: endersonmenezes/free-disk-space@2a22f8c59cae9cddae7194b33e6b92d023b2b4b8
+      with:
+        remove_android: true
+        remove_dotnet: true
+        remove_haskell: true
+        remove_tool_cache: true
+        remove_swap: true
+        remove_packages: azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*
+        remove_packages_one_command: true
+        remove_folders: /usr/share/swift /usr/share/miniconda /usr/local/lib/node_modules /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli
+          /usr/local/aws-sam-cli /usr/share/gradle
+        rm_cmd: rm
+        testing: false
+    - name: Require sufficient disk space
+      shell: bash
+      run: |
+        set -euo pipefail
+        available_kb=$(df --output=avail "$GITHUB_WORKSPACE" | tail -n 1 | tr -d " ")
+        test "$available_kb" -ge 45000000
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq git curl zip unzip python3 libelf-dev libssl-dev rsync bc bison flex build-essential gawk gnupg
+    - name: Add swap for LTO
+      uses: pierotofy/set-swap-space@fc79b3f67fa8a838184ce84a674ca12238d2c761
+      with:
+        swap-size-gb: 16
+    - name: Prepare pinned Wild build dependencies
+      uses: ./.github/actions/setup-build-environment
+      with:
+        version: android14-6.1
+        sublevel: '177'
+        kernel_patches_commit: ${{ env.KERNEL_PATCHES_COMMIT }}
+        anykernel3_commit: ${{ env.ANYKERNEL3_COMMIT }}
+    - name: Sync completely pinned AOSP manifest
+      shell: bash
+      run: bash .github/scripts/np03j_sync_kernel.sh
+    - name: Use timestamp of pinned kernel commit
+      shell: bash
+      run: |
+        set -euo pipefail
+        epoch=$(git -C kernel/common show -s --format=%ct HEAD)
+        printf "SOURCE_DATE_EPOCH=%s\n" "$epoch" >> "$GITHUB_ENV"
+        printf "KBUILD_BUILD_TIMESTAMP=%s\n" "$(date -u -d "@$epoch" "+%a %b %d %H:%M:%S UTC %Y")" >> "$GITHUB_ENV"
+    - name: Apply upstream build compatibility fixes
+      uses: ./.github/actions/kernel-fixes
+      with:
+        version: android14-6.1
+        android_version: android14
+        kernel_version: '6.1'
+        sublevel: '177'
+        os_patch_level: lts
+    - name: Integrate pinned Next with exact manager trust
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py prepare-root
+    - name: Prepare pinned SUSFS including Pershoot fixes
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py prepare-susfs
+    - name: Enable SUSFS features
+      uses: ./.github/actions/susfs-config
+    - name: Apply SUSFS kernel patches
+      uses: ./.github/actions/susfs-patches
+      with:
+        version: android14-6.1
+        sublevel: '177'
+        os_patch_level: lts
+    - name: Restore branch compatibility after SUSFS
+      uses: ./.github/actions/susfs-revert-patches
+      with:
+        version: android14-6.1
+        sublevel: '177'
+        os_patch_level: lts
+    - name: Integrate pinned Baseband Guard
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py prepare-bbg
+    - name: Apply Unicode path bypass fix
+      uses: ./.github/actions/unicode-fix
+      with:
+        kernel_version: '6.1'
+    - name: Enable required module filesystem features
+      uses: ./.github/actions/misc
+      with:
+        version: android14-6.1
+        android_version: android14
+        kernel_version: "6.1"
+        sublevel: "177"
+        variant: KernelSU-Next
+    - name: Integrate matching NoMount VFS hooks
+      uses: ./.github/actions/nomount
+      with:
+        commit: ${{ env.NOMOUNT_COMMIT }}
+        kernel_version: '6.1'
+    - name: Apply exact NP03J configuration
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_KSU=y
+          CONFIG_NOMOUNT=y
+          CONFIG_BBG=y
+          CONFIG_KSU_DEBUG=n
+          CONFIG_KSU_SUSFS_ENABLE_LOG=n
+          CONFIG_BBG_BLOCK_BOOT=n
+          CONFIG_BBG_BLOCK_RECOVERY=n
+          CONFIG_ARM64_4K_PAGES=y
+          CONFIG_ARM64_16K_PAGES=n
+          CONFIG_ARM64_64K_PAGES=n
+          CONFIG_MODVERSIONS=y
+          CONFIG_SECURITY_SELINUX=y
+    - name: Keep standard version string and KMI generation
+      uses: ./.github/actions/apply-kernel-branding
+      with:
+        variant: KernelSU-Next
+        kernel_version: '6.1'
+        android_version: android14
+        version: android14-6.1
+        sublevel: '177'
+        brand_name: ''
+        keep_kmi: true
+    - name: Prepare custom kernel exports for Kleaf
+      uses: ./.github/actions/remove-protected-exports
+    - name: Check pinned sources, manager trust and patch rejects
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py verify-sources
+    - name: Remove dirty suffix after recording patch diff
+      uses: ./.github/actions/clean-kernel-flags
+    - name: Create Bazel cache directory
+      shell: bash
+      run: mkdir -p /home/runner/.cache/bazel
+    - name: Restore and save native Bazel cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: /home/runner/.cache/bazel
+        key: np03j-kernel-${{ runner.os }}-${{ hashFiles('.github/config/np03j-next-6.1.177.json', '.github/scripts/np03j_recipe.py') }}
+    - name: Initialize config fragment
+      shell: bash
+      run: touch "$GITHUB_WORKSPACE/wild_gki.fragment"
+    - name: Build only 6.1.177 android14 4k Image
+      uses: ./.github/actions/build-kernel
+      env:
+        KBUILD_BUILD_USER: build-user
+        KBUILD_BUILD_HOST: build-host
+      with:
+        version: android14-6.1
+        page_size: 4k
+    - name: Build NoMount module from matching source
+      shell: bash
+      run: bash .github/scripts/np03j_nomount_module.sh
+    - name: Require generated configuration and package verified output
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py package
+    - name: Upload kernel and matching NoMount module
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: NP03J-6.1.177-Next-Kernel-and-NoMount
+        path: deliverables/
+        if-no-files-found: error
+        retention-days: 14
+    - name: Upload source pins, patch diff and generated configuration
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      if: always()
+      with:
+        name: NP03J-6.1.177-BuildInfo
+        path: build-info/
+        if-no-files-found: error
+        retention-days: 14
+    - name: Collect patch rejects on failure
+      uses: ./.github/actions/scan-patch-rejects
+      if: failure()
+    - name: Upload patch diagnostics
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      if: failure()
+      with:
+        name: NP03J-6.1.177-Patch-Diagnostics
+        path: patch-rejects/
+        if-no-files-found: ignore
+        retention-days: 14
+    - name: Write build summary
+      shell: bash
+      run: printf "%s\n" "NP03J / Android14 6.1.177 / 4k / KernelSU Next 33348" "SUSFS + NoMount + BBG + Unicode" "No branding; stock KMI generation
+        11 retained; symbol checks preserved." "Build artifacts only. Device compatibility has not been tested." >> "$GITHUB_STEP_SUMMARY"
+      if: always()
