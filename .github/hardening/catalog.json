@@ -1,0 +1,169 @@
+{
+  "repository": "eltavine/Duck-Detector-Refactoring",
+  "commit": "40c8a9a3dbb807b82415c4b2bc2ee67ddb29a50a",
+  "source": "RootManagerCatalog.kt",
+  "signatures": [
+    {
+      "family": "KERNEL_SU",
+      "package_names": [
+        "me.weishu.kernelsu",
+        "io.github.a13e300.mksu"
+      ],
+      "code_namespaces": [
+        "me.weishu.kernelsu"
+      ],
+      "application_suffixes": [
+        ".KernelSUApplication"
+      ],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "KernelSU"
+      ],
+      "native_payloads": [
+        "libksud.so"
+      ],
+      "certificates": [
+        "c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6",
+        "484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588"
+      ]
+    },
+    {
+      "family": "KERNEL_SU_NEXT",
+      "package_names": [
+        "com.rifsxd.ksunext"
+      ],
+      "code_namespaces": [
+        "com.rifsxd.ksunext"
+      ],
+      "application_suffixes": [
+        ".KernelSUApplication"
+      ],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "KernelSU-Next"
+      ],
+      "native_payloads": [
+        "libksud.so"
+      ],
+      "certificates": [
+        "79e590113c4c4c0c222978e413a5faa801666957b1212a328e46c00c69821bf7"
+      ]
+    },
+    {
+      "family": "SUKI_SU",
+      "package_names": [
+        "com.sukisu.ultra"
+      ],
+      "code_namespaces": [
+        "com.sukisu.ultra"
+      ],
+      "application_suffixes": [
+        ".KernelSUApplication"
+      ],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "SukiSU"
+      ],
+      "native_payloads": [
+        "libksud.so"
+      ],
+      "certificates": [
+        "947ae944f3de4ed4c21a7e4f7953ecf351bfa2b36239da37a34111ad29993eef"
+      ]
+    },
+    {
+      "family": "RE_SUKI_SU",
+      "package_names": [
+        "com.resukisu.resukisu"
+      ],
+      "code_namespaces": [
+        "org.bakasu.bakasu",
+        "com.resukisu.resukisu"
+      ],
+      "application_suffixes": [
+        ".KernelSUApplication"
+      ],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "ReSukiSU",
+        "BakaSU"
+      ],
+      "native_payloads": [
+        "libksud.so"
+      ],
+      "certificates": [
+        "d3469712b6214462764a1d8d3e5cbe1d6819a0b629791b9f4101867821f1df64"
+      ]
+    },
+    {
+      "family": "APATCH",
+      "package_names": [
+        "me.bmax.apatch"
+      ],
+      "code_namespaces": [
+        "me.bmax.apatch"
+      ],
+      "application_suffixes": [],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "APatch"
+      ],
+      "native_payloads": [
+        "libapd.so",
+        "libkptools.so",
+        "libkpatch.so"
+      ],
+      "certificates": []
+    },
+    {
+      "family": "SK_ROOT",
+      "package_names": [
+        "com.linux.permissionmanager"
+      ],
+      "code_namespaces": [
+        "com.linux.permissionmanager"
+      ],
+      "application_suffixes": [],
+      "launcher_suffixes": [
+        ".MainActivity"
+      ],
+      "label_prefixes": [
+        "SKRoot"
+      ],
+      "native_payloads": [],
+      "certificates": []
+    },
+    {
+      "family": "MAGISK",
+      "package_names": [
+        "com.topjohnwu.magisk",
+        "io.github.vvb2060.magisk"
+      ],
+      "code_namespaces": [
+        "com.topjohnwu.magisk"
+      ],
+      "application_suffixes": [],
+      "launcher_suffixes": [
+        ".ui.MainActivity"
+      ],
+      "label_prefixes": [
+        "Magisk"
+      ],
+      "native_payloads": [
+        "libmagisk.so",
+        "libmagiskinit.so"
+      ],
+      "certificates": []
+    }
+  ]
+}
