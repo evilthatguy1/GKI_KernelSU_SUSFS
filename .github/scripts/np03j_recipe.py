@@ -82,7 +82,7 @@ def prepare_manager():
     assert run("git", "rev-parse", "HEAD", cwd=source) == LOCK["root_commit"]
     manager = source / "manager"
     old, new = "com.rifsxd.ksunext", LOCK["manager_package"]
-    extensions = {".kt", ".kts", ".java", ".xml", ".c", ".cpp", ".h", ".pro", ".properties", ".toml"}
+    extensions = {".kt", ".kts", ".java", ".aidl", ".xml", ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".pro", ".properties", ".toml"}
     changed = 0
     for path in manager.rglob("*"):
         if not path.is_file() or path.suffix not in extensions:
@@ -95,6 +95,20 @@ def prepare_manager():
             path.write_text(text)
             changed += 1
     assert changed > 20
+    aidl_root = manager / "app/src/main/aidl"
+    old_aidl = aidl_root / old.replace(".", "/")
+    new_aidl = aidl_root / new.replace(".", "/")
+    assert old_aidl.is_dir() and not new_aidl.exists()
+    new_aidl.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(old_aidl), str(new_aidl))
+    assert f"package {new};" in (new_aidl / "IKsuInterface.aidl").read_text()
+    jni = (manager / "app/src/main/cpp/jni.cc").read_text()
+    assert "Java_" + new.replace(".", "_") + "_Natives_getVersion" in jni
+    assert new.replace(".", "/") + "/Natives$Profile" in jni
+    for path in manager.rglob("*"):
+        if path.is_file() and path.suffix in extensions:
+            text = path.read_text()
+            assert all(token not in text for token in (old, old.replace(".", "/"), old.replace(".", "_"))), path
     app = manager / "app/build.gradle.kts"
     replace_once(app, "    alias(libs.plugins.lsplugin.apksign)\n", "")
     text = app.read_text()
