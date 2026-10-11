@@ -179,6 +179,46 @@ def prepare_susfs():
     print("SUSFS_PIN=PASS")
 
 
+def fix_selinux_bridge():
+    common = WORK / "kernel/common"
+    declarations = """extern struct selinux_policy *backup_sepolicy;
+extern int security_context_to_sid_with_policy(struct selinux_policy *policy,
+    const char *scontext, u32 scontext_len, u32 *sid, u32 def_sid,
+    gfp_t gfp_flags, u32 *orig_sid_p, int *orig_rc_p);
+extern int security_sid_to_context_with_policy(struct selinux_policy *policy,
+    u32 sid, char **scontext, u32 *scontext_len);
+extern void security_compute_av_user_with_policy(struct selinux_policy *policy,
+    u32 ssid, u32 tsid, u16 tclass, struct av_decision *avd);"""
+    root = WORK / "kernel/KernelSU-Next/kernel/feature/selinux_hide.c"
+    exported = root.read_text()
+    assert "#define SUSFS_EXPORT\n" in exported
+    for symbol in ("security_context_to_sid_with_policy", "security_sid_to_context_with_policy", "security_compute_av_user_with_policy"):
+        assert symbol in exported
+    for name in ("hooks.c", "selinuxfs.c"):
+        path = common / "security/selinux" / name
+        replace_once(path, "extern struct selinux_state fake_state;", declarations)
+    replace_once(common / "security/selinux/hooks.c",
+        "security_context_to_sid(&fake_state, value, size, &tmp_sid, GFP_KERNEL)",
+        "security_context_to_sid_with_policy(backup_sepolicy, value, size, &tmp_sid, SECSID_NULL, GFP_KERNEL, NULL, NULL)")
+    path = common / "security/selinux/selinuxfs.c"
+    for before, after in (
+        ("security_context_to_sid(&fake_state, buf, size, &sid, GFP_KERNEL)",
+         "security_context_to_sid_with_policy(backup_sepolicy, buf, size, &sid, SECSID_NULL, GFP_KERNEL, NULL, NULL)"),
+        ("security_sid_to_context(&fake_state, sid, &canon, &len)",
+         "security_sid_to_context_with_policy(backup_sepolicy, sid, &canon, &len)"),
+        ("security_context_str_to_sid(&fake_state, scon, &ssid, GFP_KERNEL)",
+         "security_context_to_sid_with_policy(backup_sepolicy, scon, strlen(scon), &ssid, SECSID_NULL, GFP_KERNEL, NULL, NULL)"),
+        ("security_context_str_to_sid(&fake_state, tcon, &tsid, GFP_KERNEL)",
+         "security_context_to_sid_with_policy(backup_sepolicy, tcon, strlen(tcon), &tsid, SECSID_NULL, GFP_KERNEL, NULL, NULL)"),
+        ("security_compute_av_user(&fake_state, ssid, tsid, tclass, &avd)",
+         "security_compute_av_user_with_policy(backup_sepolicy, ssid, tsid, tclass, &avd)"),
+    ):
+        replace_once(path, before, after)
+    for name in ("hooks.c", "selinuxfs.c"):
+        assert "fake_state" not in (common / "security/selinux" / name).read_text()
+    print("NEXT_SUSFS_SELINUX_POLICY_BRIDGE=PASS")
+
+
 def prepare_bbg():
     directory = WORK / "kernel/Baseband-guard"
     checked_clone("https://github.com/vc-teahouse/Baseband-guard.git", LOCK["bbg_commit"], directory)
@@ -201,6 +241,10 @@ def verify_sources():
                             ("kernel/KernelSU-Next", "root_commit"), ("susfs4ksu", "susfs_commit"),
                             ("kernel/common/NoMount", "nomount_commit"), ("kernel/Baseband-guard", "bbg_commit")):
         assert run("git", "rev-parse", "HEAD", cwd=WORK / directory) == LOCK[key], directory
+    for name in ("hooks.c", "selinuxfs.c"):
+        text = (WORK / "kernel/common/security/selinux" / name).read_text()
+        assert "fake_state" not in text
+        assert "extern struct selinux_policy *backup_sepolicy;" in text
     rejects = list((WORK / "kernel/common").rglob("*.rej"))
     assert not rejects, rejects
     kbuild = (WORK / "kernel/KernelSU-Next/kernel/Kbuild").read_text()
@@ -252,7 +296,7 @@ def package():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("export-lock", "check-kernel", "prepare-manager", "prepare-root",
-                                         "prepare-susfs", "prepare-bbg", "verify-sources", "package"))
+                                         "prepare-susfs", "fix-selinux-bridge", "prepare-bbg", "verify-sources", "package"))
     command = parser.parse_args().command.replace("-", "_")
     globals()[command]()
 

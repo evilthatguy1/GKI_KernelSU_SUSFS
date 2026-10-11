@@ -1,12 +1,12 @@
-name: NP03J | 6.1.177 LTS | KernelSU Next | v3
-run-name: NP03J 6.1.177 LTS - repair v3 - Next manager + SUSFS + NoMount
+name: NP03J | 6.1.177 LTS | KernelSU Next | v4
+run-name: NP03J 6.1.177 LTS - repair v4 - Next manager + SUSFS + NoMount
 'on':
   workflow_dispatch: null
   push:
     branches:
     - main
     paths:
-    - .github/workflows/np03j-next-6.1.177-v3.yml
+    - .github/workflows/np03j-next-6.1.177-v4.yml
     - .github/config/np03j-next-6.1.177.json
     - .github/config/np03j-6.1.177-manifest.xml
     - .github/scripts/np03j_*
@@ -158,6 +158,9 @@ jobs:
         version: android14-6.1
         sublevel: '177'
         os_patch_level: lts
+    - name: Bridge SUSFS SELinux hooks to pinned Next policy helpers
+      shell: bash
+      run: python3 .github/scripts/np03j_recipe.py fix-selinux-bridge
     - name: Integrate pinned Baseband Guard
       shell: bash
       run: python3 .github/scripts/np03j_recipe.py prepare-bbg
